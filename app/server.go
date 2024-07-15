@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net"
 	"os"
@@ -8,7 +9,9 @@ import (
 )
 
 func main() {
-	// You can use print statements as follows for debugging, they'll be visible when running test
+	directory := flag.String("directory", "", "")
+	flag.Parse()
+
 	fmt.Println("Logs from your program will appear here!")
 
 	l, err := net.Listen("tcp", "0.0.0.0:4221")
@@ -24,11 +27,11 @@ func main() {
 			os.Exit(1)
 		}
 
-		go HandleConnection(conn)
+		go HandleConnection(conn, directory)
 	}
 }
 
-func HandleConnection(conn net.Conn) {
+func HandleConnection(conn net.Conn, dir string) {
 	defer conn.Close()
 	buf := make([]byte, 1024)
 	_, err := conn.Read(buf)
@@ -63,7 +66,7 @@ func HandleConnection(conn net.Conn) {
 		conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(msg), msg)))
 	case strings.HasPrefix(path, "/files/"):
 		fileName := strings.Split(path, "/")[2]
-		data, _ := os.ReadFile(fileName)
+		data, _ := os.ReadFile(fmt.Sprintf("%s/%s", dir, fileName))
 		msg := string(data)
 		conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %d\r\n\r\n%s", len(msg), msg)))
 	default:
