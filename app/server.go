@@ -49,7 +49,7 @@ func HandleConnection(conn net.Conn, dir string) {
 	}
 
 	request := parseRequest(string(buf))
-
+	fmt.Print(request)
 	switch path := request.Path; {
 	case path == "/":
 		conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
