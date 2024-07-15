@@ -38,11 +38,10 @@ func HandleConnection(conn net.Conn) {
 	}
 	packet := strings.Fields(string(buf))
 
-	path := packet[1]
-
-	if path == "/" {
+	switch path := packet[1]; {
+	case path == "/":
 		conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
-	} else if path == "/user-agent" {
+	case path == "/user-agent":
 		msg := ""
 		packet = strings.Split(string(buf), "\r\n")
 		for i := 0; i < len(packet); i++ {
@@ -58,12 +57,16 @@ func HandleConnection(conn net.Conn) {
 				break
 			}
 		}
-
 		conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(msg), msg)))
-	} else if strings.Split(path, "/")[1] == "echo" {
+	case strings.HasPrefix(path, "/echo/"):
 		msg := strings.Split(path, "/")[2]
 		conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(msg), msg)))
-	} else {
+	case strings.HasPrefix(path, "/files/"):
+		fileName := strings.Split(path, "/")[2]
+		data, _ := os.ReadFile(fileName)
+		msg := string(data)
+		conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %d\r\n\r\n%s", len(msg), msg)))
+	default:
 		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
 	}
 }
