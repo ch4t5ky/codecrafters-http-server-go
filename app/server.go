@@ -75,7 +75,7 @@ func HandleConnection(conn net.Conn, dir string) {
 			name := fmt.Sprintf("%s/%s", dir, fileName)
 			file, _ := os.OpenFile(name, os.O_CREATE|os.O_WRONLY, 0644)
 			defer file.Close()
-			_, err = file.WriteString(request.Body)
+			_, err = file.Write([]byte(request.Body))
 			conn.Write([]byte("HTTP/1.1 201 Created\r\n\r\n"))
 		}
 	default:
