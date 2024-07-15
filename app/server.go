@@ -36,15 +36,14 @@ func main() {
 		conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 	} else if path == "/user-agent" {
 		msg := ""
-		for i := 3; i < len(packet); i++ {
+		packet = strings.Split(string(buf), "\r\n")
+		for i := 0; i < len(packet); i++ {
 			fmt.Println(packet[i])
 			dict := strings.Split(packet[i], ":")
-			fmt.Println(dict)
 			if len(dict) != 2 {
 				continue
 			}
 			header, value := dict[0], dict[1]
-			fmt.Println(header, " ", value)
 			header = strings.ToLower(header)
 			if header == "user-agent" {
 				msg = value
