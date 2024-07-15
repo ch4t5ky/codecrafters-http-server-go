@@ -23,17 +23,17 @@ func main() {
 		os.Exit(1)
 	}
 	buf := make([]byte, 1024)
-	len, err := conn.Read(buf)
+	_, err = conn.Read(buf)
 	if err != nil {
 		fmt.Printf("Error reading: %#v\n", err)
 		return
 	}
 	words := strings.Fields(string(buf))
-	if words[1] == "/" {
-		conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
-	} else {
-		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
-	}
-	fmt.Printf("Message received: %s\n", string(buf[:len]))
+
+	path := words[1]
+
+	words = strings.Split(path, "/")
+
+	conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 3\r\n\r\n%s", words[2])))
 	conn.Close()
 }
