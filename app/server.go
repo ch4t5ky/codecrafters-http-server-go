@@ -98,6 +98,7 @@ func parseRequest(data string) Request {
 		headerSplit := strings.Split(header, ":")
 		name, value := headerSplit[0], headerSplit[1]
 		name = strings.ToLower(name)
+		value = strings.ReplaceAll(value, " ", "")
 		headers[name] = value
 		headerIndex++
 		header = lines[headerIndex]
