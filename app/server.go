@@ -9,6 +9,13 @@ import (
 	"strings"
 )
 
+type Request struct {
+	Method  string
+	Path    string
+	Headers map[string]string
+	Body    string
+}
+
 func main() {
 	directory := flag.String("directory", "", "")
 	flag.Parse()
@@ -40,41 +47,65 @@ func HandleConnection(conn net.Conn, dir string) {
 		fmt.Printf("Error reading: %#v\n", err)
 		return
 	}
-	packet := strings.Fields(string(buf))
 
-	switch path := packet[1]; {
+	request := parseRequest(string(buf))
+
+	switch path := request.Path; {
 	case path == "/":
 		conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 	case path == "/user-agent":
-		msg := ""
-		packet = strings.Split(string(buf), "\r\n")
-		for i := 0; i < len(packet); i++ {
-			fmt.Println(packet[i])
-			dict := strings.Split(packet[i], ":")
-			if len(dict) != 2 {
-				continue
-			}
-			header, value := dict[0], dict[1]
-			header = strings.ToLower(header)
-			if header == "user-agent" {
-				msg = strings.ReplaceAll(value, " ", "")
-				break
-			}
-		}
-		conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(msg), msg)))
+		userAgent := request.Headers["user-agent"]
+		conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(userAgent), userAgent)))
 	case strings.HasPrefix(path, "/echo/"):
 		msg := strings.Split(path, "/")[2]
 		conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(msg), msg)))
 	case strings.HasPrefix(path, "/files/"):
-		fileName := strings.Split(path, "/")[2]
-		file := fmt.Sprintf("%s/%s", dir, fileName)
-		if _, err := os.Stat(file); errors.Is(err, os.ErrNotExist) {
-			conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+		switch request.Method {
+		case "GET":
+			fileName := strings.Split(path, "/")[2]
+			file := fmt.Sprintf("%s/%s", dir, fileName)
+			if _, err := os.Stat(file); errors.Is(err, os.ErrNotExist) {
+				conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+			}
+			data, _ := os.ReadFile(file)
+			msg := string(data)
+			conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %d\r\n\r\n%s", len(msg), msg)))
+		case "POST":
+			fileName := strings.Split(path, "/")[2]
+			file := fmt.Sprintf("%s/%s", dir, fileName)
+			_ = os.WriteFile(file, []byte(request.Body), 0666)
+			conn.Write([]byte("HTTP/1.1 201 Created\r\n\r\n"))
 		}
-		data, _ := os.ReadFile(file)
-		msg := string(data)
-		conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %d\r\n\r\n%s", len(msg), msg)))
 	default:
 		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+	}
+}
+
+func parseRequest(data string) Request {
+	lines := strings.Split(data, "\r\n")
+
+	requestLine := strings.Split(lines[0], "")
+	method := requestLine[0]
+	path := requestLine[1]
+
+	headers := make(map[string]string)
+	headerIndex := 1
+	header := lines[1]
+
+	for header != "" {
+		headerSplit := strings.Split(header, ":")
+		name, value := headerSplit[0], headerSplit[1]
+		name = strings.ToLower(name)
+		headers[name] = value
+		headerIndex++
+		header = lines[headerIndex]
+	}
+
+	body := lines[headerIndex+1]
+	return Request{
+		Method:  method,
+		Path:    path,
+		Headers: headers,
+		Body:    body,
 	}
 }
