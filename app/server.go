@@ -24,26 +24,27 @@ func main() {
 			os.Exit(1)
 		}
 
-		buf := make([]byte, 1024)
-		_, err = conn.Read(buf)
-		if err != nil {
-			fmt.Printf("Error reading: %#v\n", err)
-			return
-		}
-		response := HandleConnection(string(buf))
-		conn.Write(response)
-		conn.Close()
+		go HandleConnection(conn)
 	}
 }
 
-func HandleConnection(request string) []byte {
-	path := strings.Split(request, " ")[1]
-	response := []byte("")
+func HandleConnection(conn net.Conn) {
+	defer conn.Close()
+	buf := make([]byte, 1024)
+	_, err := conn.Read(buf)
+	if err != nil {
+		fmt.Printf("Error reading: %#v\n", err)
+		return
+	}
+	packet := strings.Fields(string(buf))
+
+	path := packet[1]
+
 	if path == "/" {
-		response = []byte("HTTP/1.1 200 OK\r\n\r\n")
+		conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 	} else if path == "/user-agent" {
 		msg := ""
-		packet := strings.Split(request, "\r\n")
+		packet = strings.Split(string(buf), "\r\n")
 		for i := 0; i < len(packet); i++ {
 			fmt.Println(packet[i])
 			dict := strings.Split(packet[i], ":")
@@ -58,12 +59,11 @@ func HandleConnection(request string) []byte {
 			}
 		}
 
-		response = []byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(msg), msg))
+		conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(msg), msg)))
 	} else if strings.Split(path, "/")[1] == "echo" {
 		msg := strings.Split(path, "/")[2]
-		response = []byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(msg), msg))
+		conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(msg), msg)))
 	} else {
-		response = []byte("HTTP/1.1 404 Not Found\r\n\r\n")
+		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
 	}
-	return response
 }
