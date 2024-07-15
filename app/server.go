@@ -46,7 +46,7 @@ func main() {
 			header, value := dict[0], dict[1]
 			header = strings.ToLower(header)
 			if header == "user-agent" {
-				msg = value
+				msg = strings.ReplaceAll(value, " ", "")
 				break
 			}
 		}
