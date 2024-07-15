@@ -33,7 +33,7 @@ func main() {
 	path := words[1]
 
 	words = strings.Split(path, "/")
-
-	conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 3\r\n\r\n%s", words[2])))
+	msg := words[2]
+	conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(msg), msg)))
 	conn.Close()
 }
