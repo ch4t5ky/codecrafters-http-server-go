@@ -59,19 +59,18 @@ func HandleConnection(conn net.Conn, dir string) {
 		userAgent := request.Headers["user-agent"]
 		conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(userAgent), userAgent)))
 	case strings.HasPrefix(path, "/echo/"):
-		msg := strings.Split(path, "/")[2]
+		data := strings.Split(path, "/")[2]
 		compressionScheme, _ := request.Headers["accept-encoding"]
-		switch compressionScheme {
-		case "gzip":
-			var b bytes.Buffer
-			gz := gzip.NewWriter(&b)
-			_, _ = gz.Write([]byte(msg))
-			_ = gz.Close()
-			msg = string(b.Bytes())
-			conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\nContent-Encoding: gzip\r\n\r\n%s", len(msg), msg)))
-		default:
-			conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(msg), msg)))
+		schemes := strings.Split(compressionScheme, ",")
+		for _, scheme := range schemes {
+			msg, ok := compressMessage(scheme, data)
+			if ok {
+				conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\nContent-Encoding: gzip\r\n\r\n%s", len(msg), msg)))
+
+				return
+			}
 		}
+		msg := data
 		conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(msg), msg)))
 	case strings.HasPrefix(path, "/files/"):
 		switch request.Method {
@@ -124,5 +123,19 @@ func parseRequest(data string) Request {
 		Path:    path,
 		Headers: headers,
 		Body:    body,
+	}
+}
+
+func compressMessage(scheme string, msg string) (string, bool) {
+	switch scheme {
+	case "gzip":
+		var b bytes.Buffer
+		gz := gzip.NewWriter(&b)
+		_, _ = gz.Write([]byte(msg))
+		_ = gz.Close()
+		msg = string(b.Bytes())
+		return string(b.Bytes()), true
+	default:
+		return "", false
 	}
 }
