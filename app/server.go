@@ -84,7 +84,7 @@ func HandleConnection(conn net.Conn, dir string) {
 func parseRequest(data string) Request {
 	lines := strings.Split(data, "\r\n")
 
-	requestLine := strings.Split(lines[0], "")
+	requestLine := strings.Split(lines[0], " ")
 	method := requestLine[0]
 	path := requestLine[1]
 
