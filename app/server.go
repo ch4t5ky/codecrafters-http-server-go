@@ -27,7 +27,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		go HandleConnection(conn, directory)
+		go HandleConnection(conn, *directory)
 	}
 }
 
