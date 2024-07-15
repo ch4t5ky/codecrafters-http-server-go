@@ -42,13 +42,13 @@ func main() {
 func HandleConnection(conn net.Conn, dir string) {
 	defer conn.Close()
 	buf := make([]byte, 1024)
-	_, err := conn.Read(buf)
+	bytesRead, err := conn.Read(buf)
 	if err != nil {
 		fmt.Printf("Error reading: %#v\n", err)
 		return
 	}
 
-	request := parseRequest(string(buf))
+	request := parseRequest(string(buf[:bytesRead]))
 	fmt.Print(request)
 	switch path := request.Path; {
 	case path == "/":
