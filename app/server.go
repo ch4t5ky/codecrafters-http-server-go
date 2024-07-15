@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"errors"
 	"flag"
 	"fmt"
@@ -58,6 +60,18 @@ func HandleConnection(conn net.Conn, dir string) {
 		conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(userAgent), userAgent)))
 	case strings.HasPrefix(path, "/echo/"):
 		msg := strings.Split(path, "/")[2]
+		compressionScheme, _ := request.Headers["accept-encoding"]
+		switch compressionScheme {
+		case "gzip":
+			var b bytes.Buffer
+			gz := gzip.NewWriter(&b)
+			_, _ = gz.Write([]byte(msg))
+			_ = gz.Close()
+			msg = string(b.Bytes())
+			conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\nContent-Encoding: gzip\r\n\r\n%s", len(msg), msg)))
+		default:
+			conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(msg), msg)))
+		}
 		conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(msg), msg)))
 	case strings.HasPrefix(path, "/files/"):
 		switch request.Method {
