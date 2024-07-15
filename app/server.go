@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"net"
@@ -66,7 +67,11 @@ func HandleConnection(conn net.Conn, dir string) {
 		conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(msg), msg)))
 	case strings.HasPrefix(path, "/files/"):
 		fileName := strings.Split(path, "/")[2]
-		data, _ := os.ReadFile(fmt.Sprintf("%s/%s", dir, fileName))
+		file := fmt.Sprintf("%s/%s", dir, fileName)
+		if _, err := os.Stat(file); errors.Is(err, os.ErrNotExist) {
+			conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+		}
+		data, _ := os.ReadFile(file)
 		msg := string(data)
 		conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: %d\r\n\r\n%s", len(msg), msg)))
 	default:
