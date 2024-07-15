@@ -33,7 +33,12 @@ func main() {
 	path := words[1]
 
 	words = strings.Split(path, "/")
-	msg := words[2]
-	conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(msg), msg)))
+	if words[1] != "echo" {
+		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+	} else {
+		msg := words[2]
+		conn.Write([]byte(fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%s", len(msg), msg)))
+	}
+
 	conn.Close()
 }
